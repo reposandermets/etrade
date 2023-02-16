@@ -205,10 +205,15 @@ const flow = async () => {
 
 }
 
+let minute;
 function engine() {
+  if ((new Date()).getMinutes() !== minute) {
+    minute = (new Date()).getMinutes();
+    console.log('Tick', `:${minute}`);
+  }
+
   const interval = 33;
   setTimeout(() => {
-    console.log(getCurrentTime());
     flow()
       .then(() => {
         engine();
