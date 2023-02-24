@@ -158,10 +158,25 @@ const handlePosition = async (pos) => {
       if (currPNL >= 0.4 && currPNL < 0.5) {
         p = -0.2;
       } else if (currPNL >= 0.5 && currPNL < 0.75) {
-        p = -0.25;
+        p = -0.29;
       } else if (currPNL >= 0.75 && currPNL < 1.0) {
         p = -0.5;
+      } else if (currPNL >= 1.00 && currPNL < 1.5) {
+        p = -0.75;
+      } else if (currPNL >= 1.5 && currPNL < 2) {
+        p = -1;
+      } else if (currPNL >= 2 && currPNL < 3) {
+        p = -1.5;
+      } else if (currPNL >= 3 && currPNL < 4) {
+        p = -2.5;
+      } else if (currPNL >= 4 && currPNL < 5) {
+        p = -3.5;
+      } else if (currPNL >= 5 && currPNL < 6) {
+        p = -4.5;
+      } else if (currPNL >= 6 && currPNL < 7) {
+        p = -5.5;
       }
+      // >= 7 might make sense to add trailing stop?
 
       if (p) {
         await handlePosSl(pos, p, instrumentInfo);

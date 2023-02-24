@@ -32,6 +32,8 @@
 (defn -main
   "The entry-point for 'lein run'"
   [& args]
+  (println "\nStart worker thread...")
+  (service/start-worker)
   (println "\nCreating your server...")
   (server/start runnable-service))
 

@@ -4,6 +4,7 @@
             [io.pedestal.http.body-params :as body-params]
             [ring.util.response :as ring-resp]
             [clj-http.client :as client]
+            [clojure.core.async :as async]
             [cheshire.core :as json]))
 
 (defn get-request
@@ -32,14 +33,6 @@
   [request]
   (ring-resp/response (str "Ahoi " (time-now))))
 
-(defn send-signal
-  [request]
-  (let [url (if (System/getenv "APP_DOCKER")
-              "http://bbot:3000/"
-              "http://0.0.0.0:3000/")
-        res (get-request url)]
-    (ring-resp/response (str "Reqed " url " " (time-now) " " res))))
-
 (defn post-request-with-body-json
   [url body]
   (let [res (client/post
@@ -49,18 +42,28 @@
               :throw-entire-message? true})]
     (json/parse-string (:body res) true)))
 
+(defn send-signal
+  [request]
+  (let [url (if (System/getenv "APP_DOCKER")
+              "http://njs:3000/"
+              "http://0.0.0.0:3000/")
+        res (post-request-with-body-json
+             url
+             {:signal "test"
+              :data "test data"})]
+    (ring-resp/response (str "Reqed " url " " (time-now) " " res))))
+
 (comment
   (let [url (if (System/getenv "APP_DOCKER")
-              "http://bbot:3000/"
+              "http://njs:3000/"
               "http://0.0.0.0:3000/signal")]
     (post-request-with-body-json
      url
      {:signal "test"
       :data "test data"}))
 
-
-
   1)
+
 ;; Defines "/" and "/about" routes with their associated :get handlers.
 ;; The interceptors defined after the verb map (e.g., {:get home-page}
 ;; apply to / and its children (/about).
@@ -131,3 +134,62 @@
                                         ;; via the `:io.pedestal.http.jetty/http-configuration` container option.
                                         ;:io.pedestal.http.jetty/http-configuration (org.eclipse.jetty.server.HttpConfiguration.)
                                         }})
+
+
+(defn getTimeInUTC
+  []
+  (let [date (java.util.Date.)
+        tz (java.util.TimeZone/getTimeZone "UTC")
+        cal (java.util.Calendar/getInstance tz)]
+    (.setTime cal date)
+    {:h (.get cal java.util.Calendar/HOUR_OF_DAY)
+     :m (.get cal java.util.Calendar/MINUTE)
+     :s (.get cal java.util.Calendar/SECOND)}))
+
+(def run-engine (atom true))
+
+(defn engine
+  []
+  (prn (getTimeInUTC))
+  (let [url (if (System/getenv "APP_DOCKER")
+              "http://njs:3000/"
+              "http://0.0.0.0:3000/signal")]
+    (post-request-with-body-json
+     url
+     {:signal "test"
+      :data "test data"}))
+
+  (Thread/sleep 1000)
+  (when @run-engine (recur)))
+
+(defn start-worker
+  []
+  (reset! run-engine true)
+  (async/thread (engine)))
+
+
+(comment
+
+  (start-worker)
+
+
+
+
+
+  (reset! run-engine false)
+
+  (prn @run-engine)
+
+  (TimeZone/getTimeZone "GMT")
+
+  (System/currentTimeMillis)
+  (quot (System/currentTimeMillis) 1000)
+
+  (.format (java.text.SimpleDateFormat. "MM/dd/yyyy hh") (new java.util.Date))
+
+  (getTimeInUTC)
+
+
+  1)
+
+
