@@ -152,7 +152,7 @@
   []
   (prn (getTimeInUTC))
   (let [url (if (System/getenv "APP_DOCKER")
-              "http://njs:3000/"
+              "http://njs:3000/signal"
               "http://0.0.0.0:3000/signal")]
     (post-request-with-body-json
      url
