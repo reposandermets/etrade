@@ -27,25 +27,29 @@ const exampleSell = {
     "exchange": "BB"
 }
 
-async function sell(sig) {
-    const res = await reqs.submitOrder({
-        side: "Sell",
-        symbol: "BTCUSDT",
-        qty: "0.001",
-        orderType: "Market",
-        timeInForce: "ImmediateOrCancel",
-        stopLoss: "21100",
-        slTriggerBy: "LastPrice",
-    });
-    console.log(res, res)
-    return res;
+function calculatePositionSize(
+    risk,
+    atrSl,
+    lastPrice,
+    equityUSD,
+) {
+    const close = lastPrice;
+    const atrRiskPerc = (atrSl * 100) / close;
+    const riskRatio = risk / atrRiskPerc;
+    const equity = equityUSD / close;
+    const positionSize = ((equity * riskRatio) / 100);
+    return positionSize;
+}
+
+function calcStepSize(qty, stepSize) {
+    return Math.floor(Number(qty) / Number(stepSize)) * Number(stepSize);
 }
 
 async function exitPosition(sig, position) {
     if (position.side === 'Buy') {
         const res = await reqs.submitOrder({
             side: "Sell",
-            symbol: "BTCUSDT",
+            symbol: sig.ticker,
             qty: position.size,
             orderType: "Market",
             timeInForce: "PostOnly",
@@ -58,7 +62,7 @@ async function exitPosition(sig, position) {
     if (position.side === 'Sell') {
         const res = await reqs.submitOrder({
             side: "Buy",
-            symbol: "BTCUSDT",
+            symbol: sig.ticker,
             qty: position.size,
             orderType: "Market",
             timeInForce: "PostOnly",
@@ -69,30 +73,162 @@ async function exitPosition(sig, position) {
     }
 }
 
-async function buy(sig) {
+async function sell(sig) {
+    const [ticker, instrument] = await Promise.allSettled([
+        reqs.getSymbolTicker(sig.ticker),
+        reqs.getInstrumentInfo({ category: 'linear', symbol: sig.ticker }),
+    ]);
+
+    const lastPrice = Number(ticker.value.lastPrice);
+    const tickSize = instrument.value.priceFilter.tickSize;
+
+    console.log('lastPrice', lastPrice)
+    console.log('tickSize', tickSize)
+    console.log('atrsl', sig.atrsl)
+    console.log('atrtp', sig.atrtp)
+    const tp = lastPrice - sig.atrtp;
+    const sl = lastPrice + sig.atrsl;
+    console.log('tp', tp)
+    console.log('sl', sl)
+    const slPrice = reqs.setPricePrecisionByTickSize(sl, tickSize);
+    const tpPrice = reqs.setPricePrecisionByTickSize(tp, tickSize);
+
+    console.log('slPrice', slPrice)
+    console.log('tpPrice', tpPrice)
+
+    const equityUSD = 1000;
+    const risk = 10;
+    const atrSl = sig.atrsl;
+
+    console.log('instrument.value', instrument.value)
+
+    let posSize = calculatePositionSize(
+        risk,
+        atrSl,
+        lastPrice,
+        equityUSD,
+    )
+
+    const qtyStep = instrument.value.lotSizeFilter.qtyStep;
+    const qtyMin = instrument.value.lotSizeFilter.minTradingQty;
+
+    posSize = calcStepSize(posSize, qtyStep)
+
+    console.log('posSize', posSize)
+    if (posSize < (3 * qtyMin)) {
+        posSize = (3 * qtyMin);
+    }
+
+    console.log('posSize', posSize)
+
+    let tpSize = calcStepSize(posSize / 3, qtyStep);
+    if (tpSize < qtyMin) {
+        tpSize = qtyMin;
+    }
+
+    console.log('tpSize', tpSize)
     const res = await reqs.submitOrder({
-        side: "Buy",
-        symbol: "BTCUSDT",
-        qty: "0.001",
+        side: "Sell",
+        symbol: sig.ticker,
+        qty: String(posSize),
         orderType: "Market",
         timeInForce: "ImmediateOrCancel",
-        stopLoss: "19542.3",
+        stopLoss: String(slPrice),
         slTriggerBy: "LastPrice",
     });
 
-    console.log(res, res)
+    // console.log(res, res)
 
     const res2 = await reqs.submitOrder({
-        side: "Sell",
-        symbol: "BTCUSDT",
-        qty: "0.001",
+        side: "Buy",
+        symbol: sig.ticker,
+        qty: String(tpSize),
         orderType: "Limit",
         timeInForce: "PostOnly",
-        price: "22542.3",
+        price: String(tpPrice),
         reduceOnly: true,
     });
 
-    return res;
+    return [res, res2];
+}
+
+async function buy(sig) {
+    const [ticker, instrument] = await Promise.allSettled([
+        reqs.getSymbolTicker(sig.ticker),
+        reqs.getInstrumentInfo({ category: 'linear', symbol: sig.ticker }),
+    ]);
+
+    const lastPrice = Number(ticker.value.lastPrice);
+    const tickSize = instrument.value.priceFilter.tickSize;
+
+    console.log('lastPrice', lastPrice)
+    console.log('tickSize', tickSize)
+    console.log('atrsl', sig.atrsl)
+    console.log('atrtp', sig.atrtp)
+    const tp = lastPrice + sig.atrtp;
+    const sl = lastPrice - sig.atrsl;
+    console.log('tp', tp)
+    console.log('sl', sl)
+    const slPrice = reqs.setPricePrecisionByTickSize(sl, tickSize);
+    const tpPrice = reqs.setPricePrecisionByTickSize(tp, tickSize);
+
+    console.log('slPrice', slPrice)
+    console.log('tpPrice', tpPrice)
+
+    const equityUSD = 1000;
+    const risk = 10;
+    const atrSl = sig.atrsl;
+
+    console.log('instrument.value', instrument.value)
+
+    let posSize = calculatePositionSize(
+        risk,
+        atrSl,
+        lastPrice,
+        equityUSD,
+    )
+
+    const qtyStep = instrument.value.lotSizeFilter.qtyStep;
+    const qtyMin = instrument.value.lotSizeFilter.minTradingQty;
+
+    posSize = calcStepSize(posSize, qtyStep)
+
+    console.log('posSize', posSize)
+    if (posSize < (3 * qtyMin)) {
+        posSize = (3 * qtyMin);
+    }
+
+    console.log('posSize', posSize)
+
+    let tpSize = calcStepSize(posSize / 3, qtyStep);
+    if (tpSize < qtyMin) {
+        tpSize = qtyMin;
+    }
+
+    console.log('tpSize', tpSize)
+    const res = await reqs.submitOrder({
+        side: "Buy",
+        symbol: sig.ticker,
+        qty: String(posSize),
+        orderType: "Market",
+        timeInForce: "ImmediateOrCancel",
+        stopLoss: String(slPrice),
+        slTriggerBy: "LastPrice",
+    });
+
+    // console.log(res, res)
+
+    const res2 = await reqs.submitOrder({
+        side: "Sell",
+        symbol: sig.ticker,
+        qty: String(tpSize),
+        orderType: "Limit",
+        timeInForce: "PostOnly",
+        price: String(tpPrice),
+        reduceOnly: true,
+    });
+
+    return [res, res2];
 }
 
 // in check positions move sl only if no tp and profit pnl is at least 0.25
@@ -136,7 +272,4 @@ async function signalHandler(sig) {
     }
 }
 
-// signalHandler(exampleBuyExit)
-//     .catch((e) => {
-//         console.log('e', e);
-//     });
+module.exports.signalHandler = signalHandler;

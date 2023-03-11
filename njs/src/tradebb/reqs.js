@@ -115,7 +115,7 @@ const calcSlPercentage = (side, entryPriceString, percentage) => {
 
 const setPricePrecisionByTickSize = (price, tickSize) => {
     const precision = tickSize.toString().split('.')[1].length - 1;
-    return price.toFixed(precision);
+    return Number(price).toFixed(precision);
 }
 
 module.exports.setPricePrecisionByTickSize = setPricePrecisionByTickSize;
@@ -264,27 +264,27 @@ const submitOrder = async ({
     slTriggerBy,
     price,
     reduceOnly,
-  }) => {
+}) => {
     try {
-      const { retMsg, result } = await client.submitOrder({
-        side,
-        symbol,
-        qty,
-        orderType,
-        timeInForce,
-        stopLoss,
-          slTriggerBy,
-          price,
-          reduceOnly,
-      });
-      if (retMsg !== 'OK') {
-        throw new Error('submitOrder failed ' + retMsg);
-      }
-      return result;
+        const { retMsg, result } = await client.submitOrder({
+            side,
+            symbol,
+            qty,
+            orderType,
+            timeInForce,
+            stopLoss,
+            slTriggerBy,
+            price,
+            reduceOnly,
+        });
+        if (retMsg !== 'OK') {
+            throw new Error('submitOrder failed ' + retMsg);
+        }
+        return result;
     } catch (error) {
-      console.error('submitOrder failed: ', error);
-      throw error;
+        console.error('submitOrder failed: ', error);
+        throw error;
     }
-  };
-  
-  module.exports.submitOrder = submitOrder;
+};
+
+module.exports.submitOrder = submitOrder;

@@ -115,7 +115,7 @@ const calcSlPercentage = (side, entryPriceString, percentage) => {
 
 const setPricePrecisionByTickSize = (price, tickSize) => {
   const precision = tickSize.toString().split('.')[1].length - 1;
-  return price.toFixed(precision);
+  return Number(price).toFixed(precision);
 }
 
 const handlePosSl = async (pos, p, instrumentInfo) => {
