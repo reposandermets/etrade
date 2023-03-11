@@ -13,6 +13,8 @@ const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
+module.exports.sleep = sleep;
+
 function getCurrentTime() {
   const d = new Date();
   return `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
@@ -41,6 +43,8 @@ const getSymbolTicker = async (symbol) => {
   }
 };
 
+module.exports.getSymbolTicker = getSymbolTicker;
+
 const getInstrumentInfo = async ({ category, symbol }) => {
   try {
     const { retMsg, result } = await client.getInstrumentInfo({
@@ -57,6 +61,8 @@ const getInstrumentInfo = async ({ category, symbol }) => {
     throw error;
   }
 };
+
+module.exports.getInstrumentInfo = getInstrumentInfo;
 
 const setTPSL = async ({
   positionIdx,
@@ -191,10 +197,10 @@ const handlePosition = async (pos) => {
   }
 }
 
-const getPositions = async () => {
+const getPositions = async (settleCoin) => {
   try {
     const { retMsg, result } = await client.getPositions({
-      settleCoin: 'USDT',
+      settleCoin,
     });
     if (retMsg !== 'OK') {
       throw new Error('getPositions failed ' + retMsg);
@@ -210,9 +216,12 @@ const getPositions = async () => {
   }
 };
 
+module.exports.getPositions = getPositions;
+
+
 const flow = async () => {
   try {
-    await getPositions();
+    await getPositions('USDC');
   } catch (e) {
     console.error('request failed: ', e);
     throw e;
